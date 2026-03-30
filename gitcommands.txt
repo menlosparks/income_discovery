@@ -1,0 +1,17 @@
+git clone https://github.com/menlosparks/income_discovery.git
+
+
+
+# Download the latest updates without merging them yet
+git fetch origin
+
+# Discard all local changes and match the remote branch exactly
+git reset --hard origin/main
+
+
+#TO check in
+git add filename.txt
+
+git commit -m "Add the irs_downloader script"
+
+git push origin main
