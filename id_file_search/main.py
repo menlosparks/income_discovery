@@ -6,6 +6,7 @@ from claude_filesearcher import ClaudeFileSearcher
 # Load environment variables
 load_dotenv()
 
+## updated for git
 INPUT_DIR = r"../storage/irs-files"
 EXPLAIN_QUERY='Explain how RMD value is calculated'
 
