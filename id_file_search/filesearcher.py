@@ -23,6 +23,7 @@ class FileSearcher:
     FILE_SEARCH_STORE_NAME = 'id-irs-files-store'
     MODEL_NAME = 'gemini-2.0-flash'
     files_in_store = []
+    
     def __init__(self, files_list: list[str]):
         """
         Args:
