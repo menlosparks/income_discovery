@@ -1,14 +1,24 @@
 import os
 import re
+import json
 from google import genai
 from google.genai import types
 import time
+from pydantic import BaseModel
+
 
 
 class FileSearcher:
     """
     """
-
+    SYSTEM_INSTRUCTION = """
+    You are a helpful financial advisor. Give concise answers to the user's questions. Limit
+    the answers to 3 or 4 sentences. If the answer is not in the documents, say so. Be very sure of 
+    your calculations and provide the answer in a clear and concise manner. Do not 
+    exceed 100 words in your response. 
+    You have access to the `get_dummy_user_data` tool to retrieve information about the user's 
+    spouse, income, and account balances. Use it whenever a question requires specific user data.
+    """
 
     def __init__(self, files_list: list[str]):
         """
@@ -57,21 +67,52 @@ class FileSearcher:
         return self.file_search_store
 
 
+
     def search_files(self, query: str):
         """Search files in the store."""
 
         response = self.client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model="gemini-2.0-flash",
             contents=query,
             config=types.GenerateContentConfig(
+                system_instruction=self.SYSTEM_INSTRUCTION,
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
                 tools=[
                     types.Tool(
                         file_search=types.FileSearch(
                             file_search_store_names=[self.file_search_store.name]
                         )
+                    ),
+                    types.Tool(
+                        function_declarations=[
+                            types.FunctionDeclaration(
+                                name='get_dummy_user_data',
+                                description='Returns a dummy JSON string with user financial information.',
+                                parameters=types.Schema(
+                                    type='OBJECT',
+                                    properties={}
+                                )
+                            )
+                        ]
                     )
                 ]
             )
         )
 
         return response
+
+    def get_dummy_user_data(self) -> str:
+        """Returns a dummy JSON string with user financial information."""
+        user_data = {
+            "date_of_birth_spouse_1": "1985-06-15",
+            "date_of_birth_spouse_2": "1987-09-22",
+            "end_of_year_account_balance": 245000.50,
+            "marital_status": "Married Filing Jointly",
+            "retirement_age_spouse_1": 65,
+            "current_income_spouse_1": 120000,
+            "retirement_age_spouse_1_repeat": 65,  # Included as requested
+            "current_income_spouse_1_repeat": 120000   # Included as requested
+        }
+        return json.dumps(user_data, indent=4)
+
+        

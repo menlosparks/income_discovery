@@ -1,12 +1,13 @@
 import os
 from dotenv import load_dotenv
 from filesearcher import FileSearcher
-
+from claude_filesearcher import ClaudeFileSearcher
 
 # Load environment variables
 load_dotenv()
 
-INPUT_DIR = r"C:\Users\abhi2\source\inc_disc\storage\irs-files"
+INPUT_DIR = r"../storage/irs-files"
+EXPLAIN_QUERY='Explain how RMD value is calculated'
 
 def get_all_files(input_dir):
     """Returns a list of all files in the given directory."""
@@ -19,9 +20,25 @@ def get_all_files(input_dir):
             file_list.append(os.path.join(root, file))
     return file_list
 
+def show_response(response):
+    print('\n\n***************\n\n', response.text, '\n\n***************\n\n')
+
 if __name__ == "__main__":
     files_list = get_all_files(INPUT_DIR)
-    searcher = FileSearcher(files_list)
+    # searcher = FileSearcher(files_list)
+    searcher = ClaudeFileSearcher(files_list)
     file_search_store = searcher.upload_files()
-    response = searcher.search_files("At what age do RMDs need to be taken?")
-    print(' REsponse text is ----> ', response.text , ' <---- End of response text')
+
+    response = searcher.search_files(EXPLAIN_QUERY)
+    show_response(response)
+    
+    print("\nAsk questions about your files (type 'exit' or 'quit' to stop):")
+    while True:
+        query = input("\nEnter  your Query: ")
+        if query.lower() in ["exit", "quit", ""] or query == "":
+            break
+        
+        response = searcher.search_files(query)
+        show_response(response)
+
+
