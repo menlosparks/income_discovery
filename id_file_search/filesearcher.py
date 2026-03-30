@@ -20,6 +20,9 @@ class FileSearcher:
     spouse, income, and account balances. Use it whenever a question requires specific user data.
     """
 
+    FILE_SEARCH_STORE_NAME = 'id-irs-files-store'
+    MODEL_NAME = 'gemini-2.0-flash'
+    files_in_store = []
     def __init__(self, files_list: list[str]):
         """
         Args:
@@ -31,7 +34,7 @@ class FileSearcher:
 
     def upload_files(self):
         """Upload files to the server."""
-        self.file_search_store = self.client.file_search_stores.create(config={'display_name': 'irs-files-store'})
+        self.file_search_store = self.client.file_search_stores.create(config={'display_name': self.FILE_SEARCH_STORE_NAME})
 
         operations = []
         for file in self.files_list:
@@ -72,7 +75,7 @@ class FileSearcher:
         """Search files in the store."""
 
         response = self.client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=self.MODEL_NAME,
             contents=query,
             config=types.GenerateContentConfig(
                 system_instruction=self.SYSTEM_INSTRUCTION,
