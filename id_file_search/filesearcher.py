@@ -23,7 +23,7 @@ class FileSearcher:
     FILE_SEARCH_STORE_NAME = 'id-irs-files-store'
     MODEL_NAME = 'gemini-2.0-flash'
     files_in_store = []
-    
+
     def __init__(self, files_list: list[str]):
         """
         Args:
@@ -32,6 +32,21 @@ class FileSearcher:
         self.files_list = files_list
         self.file_search_store = None
         self.client = genai.Client()
+
+    def get_files_in_store(self):
+        """Get files in the store."""
+        my_file_search_store = self.client.file_search_stores.get(name='fileSearchStores/' + self.FILE_SEARCH_STORE_NAME)
+
+        if my_file_search_store and my_file_search_store.files:
+            print(f"Found {len(my_file_search_store.files)} files in the store {self.file_search_store.name}.")
+            for file in my_file_search_store.files:
+                print(f"File: {file.display_name}")
+            self.file_search_store = my_file_search_store
+            self.files_in_store = my_file_search_store.files
+        else:
+            print("No files found in the store.")
+            self.files_in_store = []
+        return self.files_in_store
 
     def upload_files(self):
         """Upload files to the server."""

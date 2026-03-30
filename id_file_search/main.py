@@ -26,8 +26,9 @@ def show_response(response):
 
 if __name__ == "__main__":
     files_list = get_all_files(INPUT_DIR)
-    # searcher = FileSearcher(files_list)
-    searcher = ClaudeFileSearcher(files_list)
+    searcher = FileSearcher(files_list)
+    # searcher = ClaudeFileSearcher(files_list)
+    
     file_search_store = searcher.upload_files()
 
     response = searcher.search_files(EXPLAIN_QUERY)
