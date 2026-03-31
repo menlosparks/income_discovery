@@ -22,6 +22,9 @@ def get_all_files(input_dir):
     for root, _, files in os.walk(input_dir):
         for file in files:
             file_list.append(os.path.join(root, file))
+    print(f"Found {len(file_list)} files in the directory {input_dir}.")
+    for file in file_list:
+        print(file)
     return file_list
 
 def show_response(response):
@@ -29,7 +32,7 @@ def show_response(response):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--client_id", type=str, default="client_1", help="ID of the client")
+    parser.add_argument("--client_id", type=str, default="none", help="ID of the client")
     args = parser.parse_args()
     
     client_id = args.client_id
@@ -40,7 +43,13 @@ if __name__ == "__main__":
 
     file_search_store = searcher.upload_files(files_list)
 
-    response = searcher.search_files(EXPLAIN_QUERY, user_data.get_user_data(client_id))
+    if client_id == "none":
+        print("No client ID provided. Skipping search.")
+        sys.exit(0)
+    else:
+        user_data_str = user_data.get_user_data(client_id)
+
+    response = searcher.search_files(EXPLAIN_QUERY, user_data_str)
     show_response(response)
     
     print("\nAsk questions about your files (type 'exit' or 'quit' to stop):")

@@ -95,22 +95,22 @@ class FileSearcher:
             documents_in_store = self.client.file_search_stores.documents.list(parent=self.file_search_store.name)
             print(f"Found {len(documents_in_store)} files in the store {self.file_search_store.name}.")
             for document_in_store in documents_in_store:
-                print(document_in_store)
+                print(document_in_store.display_name)
 
-        if documents_in_store and len(documents_in_store) > 0:
-            print("Files already in store. Skipping upload.")
-            return self.file_search_store
+        # if documents_in_store and len(documents_in_store) > 0:
+        #     print("Files already in store. Skipping upload.")
+        #     return self.file_search_store
 
 
 
         document_display_names = [doc.display_name for doc in documents_in_store]
         operations = []
         for file in files_list:
-            print(f"Uploading to store {self.file_search_store.name} the file {file}...")
             if os.path.basename(file) in document_display_names:
                 print(f"File {file} already in store. Skipping upload.")
                 continue
 
+            print(f"Uploading to store {self.file_search_store.name} the file {file}...")
             operation = self.client.file_search_stores.upload_to_file_search_store(
                 file=file,
                 file_search_store_name=self.file_search_store.name,

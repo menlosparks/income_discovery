@@ -12,7 +12,9 @@ class UserData:
                 "retirement_age_spouse_1": 65,
                 "current_income_spouse_1": 780000,
                 "retirement_age_spouse_2": 65,  # Included as requested
-                "current_income_spouse_2": 550000   # Included as requested
+                "current_income_spouse_2": 550000,   # Included as requested
+                "self_employed_spouse_1": True,
+                "self_employed_spouse_2": False
             },
             "client_2": {
                 "date_of_birth_spouse_1": "1985-06-15",
@@ -22,7 +24,9 @@ class UserData:
                 "retirement_age_spouse_1": 65,
                 "current_income_spouse_1": 120000,
                 "retirement_age_spouse_2": 65,  # Included as requested
-                "current_income_spouse_2": 120000   # Included as requested
+                "current_income_spouse_2": 120000,   # Included as requested
+                "self_employed_spouse_1": False,
+                "self_employed_spouse_2": False
             },
             "client_3": {
                 "date_of_birth_spouse_1": "1985-06-15",
@@ -31,8 +35,7 @@ class UserData:
                 "marital_status": "Single",
                 "retirement_age_spouse_1": 65,
                 "current_income_spouse_1": 120000,
-                "retirement_age_spouse_1_repeat": 65,  # Included as requested
-                "current_income_spouse_1_repeat": 120000   # Included as requested
+                "self_employed_spouse_1": False,
             }
         }   
 
