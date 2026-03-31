@@ -8,7 +8,7 @@ load_dotenv()
 
 ## updated for git
 INPUT_DIR = r"../storage/irs-files"
-EXPLAIN_QUERY='Explain how RMD value is calculated'
+EXPLAIN_QUERY='Explain how RMD value is calculated for the user'
 
 def get_all_files(input_dir):
     """Returns a list of all files in the given directory."""
@@ -26,10 +26,11 @@ def show_response(response):
 
 if __name__ == "__main__":
     files_list = get_all_files(INPUT_DIR)
-    searcher = FileSearcher(files_list)
+    searcher = FileSearcher()
     # searcher = ClaudeFileSearcher(files_list)
-    
-    file_search_store = searcher.upload_files()
+
+    # searcher.get_files_in_store()
+    file_search_store = searcher.upload_files(files_list)
 
     response = searcher.search_files(EXPLAIN_QUERY)
     show_response(response)

@@ -21,43 +21,98 @@ class FileSearcher:
     """
 
     FILE_SEARCH_STORE_NAME = 'id-irs-files-store'
+    FILE_SEARCH_STORE_NAME_FILE = 'file-search-store-name.dat'
     MODEL_NAME = 'gemini-2.0-flash'
     files_in_store = []
 
-    def __init__(self, files_list: list[str]):
+    def __init__(self):
         """
         Args:
             files_list: List of files to search.
         """
-        self.files_list = files_list
         self.file_search_store = None
         self.client = genai.Client()
 
-    def get_files_in_store(self):
-        """Get files in the store."""
-        my_file_search_store = self.client.file_search_stores.get(name='fileSearchStores/' + self.FILE_SEARCH_STORE_NAME)
+    def get_or_create_file_search_store(self):
+        """Get or create a file search store."""
+        try:
+            file_search_store_name = None
+            file_search_store = None
+            if os.path.exists(self.FILE_SEARCH_STORE_NAME_FILE):
+                with open(self.FILE_SEARCH_STORE_NAME_FILE, 'r') as f:
+                    file_search_store_name = f.read()
+                print("Found file search store name: ", file_search_store_name)
+                file_search_store = self.client.file_search_stores.get(name=file_search_store_name)
+                return file_search_store
 
-        if my_file_search_store and my_file_search_store.files:
-            print(f"Found {len(my_file_search_store.files)} files in the store {self.file_search_store.name}.")
-            for file in my_file_search_store.files:
-                print(f"File: {file.display_name}")
-            self.file_search_store = my_file_search_store
-            self.files_in_store = my_file_search_store.files
-        else:
-            print("No files found in the store.")
-            self.files_in_store = []
-        return self.files_in_store
+            if not file_search_store:
+                print("No file search store found. Creating a new one...")
+                file_search_store = self.client.file_search_stores.create(config={'display_name': self.FILE_SEARCH_STORE_NAME})
+                print("Created file search store name  : ", file_search_store.name)
+                with open(self.FILE_SEARCH_STORE_NAME_FILE, 'w') as f:
+                    f.write(file_search_store.name)
 
-    def upload_files(self):
+            if file_search_store:
+                print("Verifying retrieval from store")
+                my_file_search_store = self.client.file_search_stores.get(name=file_search_store.name)
+                print("Fetched from store name: ", my_file_search_store.name)
+                return file_search_store
+            print("No file search store found.")
+            return None
+        except Exception as e:
+            print(f"Exception type: {type(e).__name__}, message: {e}")
+            raise e
+
+    # def get_files_in_store(self):
+    #     """Get or create a file search store."""
+
+    #     file_search_store = self.get_or_create_file_search_store()
+    #     if not file_search_store:
+    #         print("No file search store found.")
+    #         return []
+    #     if file_search_store:
+    #         documents_in_store = self.client.file_search_stores.documents.list(parent=file_search_store.name)
+    #         print(f"Found {len(documents_in_store)} files in the store {file_search_store.name}.")
+    #         for document_in_store in documents_in_store:
+    #             print(document_in_store)
+    #         return documents_in_store
+    #     else:
+    #         print("No files found in the store.")
+    #         self.files_in_store = []
+    #     return self.files_in_store
+
+
+
+    def upload_files(self, files_list: list[str]):
         """Upload files to the server."""
-        self.file_search_store = self.client.file_search_stores.create(config={'display_name': self.FILE_SEARCH_STORE_NAME})
+        file_search_store = self.get_or_create_file_search_store()
+        if not file_search_store:
+            print("No file search store found.")
+            return []
+        documents_in_store = []
+        if file_search_store:
+            documents_in_store = self.client.file_search_stores.documents.list(parent=file_search_store.name)
+            print(f"Found {len(documents_in_store)} files in the store {file_search_store.name}.")
+            for document_in_store in documents_in_store:
+                print(document_in_store)
 
+        if documents_in_store and len(documents_in_store) > 0:
+            print("Files already in store. Skipping upload.")
+            return file_search_store
+
+
+
+        document_display_names = [doc.display_name for doc in documents_in_store]
         operations = []
-        for file in self.files_list:
-            print(f"Uploading to store {self.file_search_store.name} the file {file}...")
+        for file in files_list:
+            print(f"Uploading to store {file_search_store.name} the file {file}...")
+            if os.path.basename(file) in document_display_names:
+                print(f"File {file} already in store. Skipping upload.")
+                continue
+
             operation = self.client.file_search_stores.upload_to_file_search_store(
                 file=file,
-                file_search_store_name=self.file_search_store.name,
+                file_search_store_name=file_search_store.name,
                 config={
                     'display_name' : os.path.basename(file),
                 }
@@ -72,18 +127,7 @@ class FileSearcher:
             print(f"Operation {operation.name} completed.")
 
 
-            # # Use the actual file path from the loop and set a valid display name
-            # sample_file = client.files.upload(
-            #     file=file, 
-            #     config={'display_name': os.path.basename(file)}
-            # )
-
-            # # Create a file search store using the same client
-            # file_search_store = client.file_search_stores.create(
-            #     config={'display_name': os.path.basename(file) + '-store'}
-            # )
-
-        return self.file_search_store
+        return file_search_store
 
 
 
