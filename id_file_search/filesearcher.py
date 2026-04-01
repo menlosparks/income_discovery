@@ -22,7 +22,9 @@ class FileSearcher:
 
     FILE_SEARCH_STORE_NAME = 'id-irs-files-store'
     FILE_SEARCH_STORE_NAME_FILE = 'file-search-store-name.dat'
-    MODEL_NAME = 'gemini-2.5-flash'
+    # MODEL_NAME = 'gemini-2.5-flash'
+    MODEL_NAME = "gemma-3-27b-it"
+
     files_in_store = []
 
     def __init__(self):
