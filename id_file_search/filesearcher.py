@@ -22,8 +22,8 @@ class FileSearcher:
 
     FILE_SEARCH_STORE_NAME = 'id-irs-files-store'
     FILE_SEARCH_STORE_NAME_FILE = 'file-search-store-name.dat'
-    # MODEL_NAME = 'gemini-2.5-flash'
-    MODEL_NAME = "gemma-3-27b-it"
+    MODEL_NAME = 'gemini-2.5-flash'
+    # MODEL_NAME = "gemma-3-27b-it"
 
     files_in_store = []
 
@@ -166,7 +166,11 @@ class FileSearcher:
                 ]
             )
         )
-
+        # Accessing the tokens
+        usage = response.usage_metadata
+        print(f"Prompt tokens: {usage.prompt_token_count}")
+        print(f"Candidates tokens: {usage.candidates_token_count}")
+        print(f"Total tokens: {usage.total_token_count}")
         return response
 
     def get_dummy_user_data(self, client_id: str) -> str:
