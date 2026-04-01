@@ -7,8 +7,12 @@ class UserData:
             "client_1": {
                 "date_of_birth_spouse_1": "1955-06-15",
                 "date_of_birth_spouse_2": "1957-09-22",
-                "end_of_year_account_balance": 3345000.50,
-                "marital_status": "Married Filing Jointly",
+                "end_of_year_401K_balance": 3345000.50,
+                "end_of_year_traditional_ira_balance": 3345000.50,
+                "end_of_year_roth_ira_balance": 345000.50,
+                "end_of_year_401K_balance": 78000.50,
+                "annual_pension_income_spouse_1": 78000,
+                "annual_pension_income_spouse_2": 55000,
                 "retirement_age_spouse_1": 65,
                 "current_income_spouse_1": 780000,
                 "retirement_age_spouse_2": 65,  # Included as requested
@@ -19,8 +23,11 @@ class UserData:
             "client_2": {
                 "date_of_birth_spouse_1": "1985-06-15",
                 "date_of_birth_spouse_2": "1987-09-22",
-                "end_of_year_account_balance": 245000.50,
-                "marital_status": "Married Filing Jointly",
+                "end_of_year_401K_balance": 245000.50,
+                "end_of_year_roth_ira_balance": 97000.50,
+                "end_of_year_401K_balance": 79700.50,
+                "annual_pension_income_spouse_1": 23000,
+                "annual_pension_income_spouse_2": 25000,
                 "retirement_age_spouse_1": 65,
                 "current_income_spouse_1": 120000,
                 "retirement_age_spouse_2": 65,  # Included as requested
@@ -31,8 +38,10 @@ class UserData:
             "client_3": {
                 "date_of_birth_spouse_1": "1985-06-15",
                 "date_of_birth_spouse_2": "1987-09-22",
-                "end_of_year_account_balance": 245000.50,
-                "marital_status": "Single",
+                "end_of_year_401K_balance": 245000.50,
+                "end_of_year_roth_ira_balance": 996.50,
+                "end_of_year_401K_balance": 446780,
+                "annual_pension_income_spouse_1": 23000,
                 "retirement_age_spouse_1": 65,
                 "current_income_spouse_1": 120000,
                 "self_employed_spouse_1": False,
