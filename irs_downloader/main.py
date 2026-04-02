@@ -1,12 +1,19 @@
 from downloader import IRSDownloader
+from chunker import Chunker
+import argparse
 
 ## Down loads files from IRS
-def main():
+def main(chunk=False):
     # Define storage directory
     STORAGE_DIR = r"../storage/irs-files"
+    STORAGE_DIR_CHUNK = r"../storage/irs-files-chunk"
 
     # Initialize the downloader
-    downloader = IRSDownloader(STORAGE_DIR)
+    downloader = None
+    if ( not chunk):
+        downloader = IRSDownloader(STORAGE_DIR)
+    else:
+        downloader = Chunker(STORAGE_DIR_CHUNK)
     
     # Example URLs provided by user
     urls = [
@@ -32,4 +39,10 @@ def main():
         print("\nNo files downloaded.")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--chunk", type=bool, default=False, help="Chunk number")
+    args = parser.parse_args()
+    
+    chunk = args.chunk
+    print(f'Chunking is {chunk}')
+    main(chunk)
