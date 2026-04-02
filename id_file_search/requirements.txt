@@ -4,3 +4,5 @@ lxml
 google-genai
 python-dotenv
 anthropic
+pinecone
+pinecone-client

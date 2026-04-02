@@ -5,12 +5,14 @@ from dotenv import load_dotenv
 from filesearcher import FileSearcher
 from claude_filesearcher import ClaudeFileSearcher
 from user_data import UserData
+from pconsearch import PconSearch
 
 # Load environment variables
 load_dotenv()
 
 ## updated for git
 INPUT_DIR = r"../storage/irs-files"
+INPUT_DIR_CHUNK = r"../storage/irs-files-chunk"
 EXPLAIN_QUERY='Explain how RMD value is calculated for the user'
 
 def get_all_files(input_dir):
@@ -23,7 +25,7 @@ def get_all_files(input_dir):
         for file in files:
             file_list.append(os.path.join(root, file))
     print(f"Found {len(file_list)} files in the directory {input_dir}.")
-    for file in file_list:
+    for file in file_list[:5]:
         print(file)
     return file_list
 
@@ -33,12 +35,15 @@ def show_response(response):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--client_id", type=str, default="none", help="ID of the client")
+    parser.add_argument("--pinecone", type=bool, default=False, help="Use pinecone")
     args = parser.parse_args()
     
     client_id = args.client_id
+    use_pinecone = args.pinecone
+    print("use_pinecone", use_pinecone)
     
-    files_list = get_all_files(INPUT_DIR)
-    searcher = FileSearcher()
+    files_list = get_all_files(INPUT_DIR_CHUNK) if use_pinecone else get_all_files(INPUT_DIR)
+    searcher = PconSearch() if use_pinecone else FileSearcher()
     user_data = UserData()
 
     file_search_store = searcher.upload_files(files_list)

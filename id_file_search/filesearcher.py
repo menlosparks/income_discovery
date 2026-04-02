@@ -13,11 +13,11 @@ class FileSearcher:
     """
     SYSTEM_INSTRUCTION = """
     You are a helpful financial advisor. Give concise answers to the user's questions. Limit
-    the answers to 3 or 4 sentences. If the answer is not in the documents, say so. Be very sure of 
-    your calculations and provide the answer in a clear and concise manner. Do not 
-    exceed 100 words in your response. 
-    You have access to the `get_dummy_user_data` tool to retrieve information about the user's 
+    the answers to 3 or 4 sentences. If the answer is not in the documents, say so. 
+    You have access to the user_data to retrieve information about the user's 
     spouse, income, and account balances. Use it whenever a question requires specific user data.
+    Be very sure of your calculations and provide the answer in a clear and concise manner. 
+    Do not exceed 100 words in your response. 
     """
 
     FILE_SEARCH_STORE_NAME = 'id-irs-files-store'

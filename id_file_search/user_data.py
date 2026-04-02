@@ -7,7 +7,7 @@ class UserData:
             "client_1": {
                 "date_of_birth_spouse_1": "1955-06-15",
                 "date_of_birth_spouse_2": "1957-09-22",
-                "end_of_year_401K_balance": 3345000.50,
+                "end_of_year_401K_balance": 685000.50,
                 "end_of_year_traditional_ira_balance": 3345000.50,
                 "end_of_year_roth_ira_balance": 345000.50,
                 "annual_pension_income_spouse_1": 78000,
