@@ -14,9 +14,10 @@ class FileSearcher:
     SYSTEM_INSTRUCTION = """
     You are a helpful financial advisor. Give concise answers to the user's questions. Limit
     the answers to 3 or 4 sentences. If the answer is not in the documents, say so. 
-    You have access to the user_data to retrieve information about the user's 
-    spouse, income, and account balances. Use it whenever a question requires specific user data.
-    Be very sure of your calculations and provide the answer in a clear and concise manner. 
+    You have access to the user_data in JSON format to retrieve information about the user's 
+    spouse, income, and account balances. In every response include a reference to the relevant
+    field in the  user data which is provided in the JSON object.
+    Always make calculations based on the user data, be sure of the calculations and provide the answer in a clear and concise manner. 
     Do not exceed 100 words in your response. 
     """
 
@@ -171,7 +172,7 @@ class FileSearcher:
         print(f"Prompt tokens: {usage.prompt_token_count}")
         print(f"Candidates tokens: {usage.candidates_token_count}")
         print(f"Total tokens: {usage.total_token_count}")
-        return response
+        return response, None
 
     def get_dummy_user_data(self, client_id: str) -> str:
         """Returns a dummy JSON string with user financial information."""

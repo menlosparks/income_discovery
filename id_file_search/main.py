@@ -1,4 +1,5 @@
 import os
+import time
 import sys
 import argparse
 from dotenv import load_dotenv
@@ -32,16 +33,38 @@ def get_all_files(input_dir):
 def show_response(response):
     print('\n\n***************\n\n', response.text, '\n\n***************\n\n')
 
+def save_response(response, filename, query, sources_used = None):
+    with open(filename, "a") as f:
+        f.write("\n\n***************\n\n Query:\n " + query + "\n\n")
+        usage = response.usage_metadata
+        f.write(f"Prompt tokens: {usage.prompt_token_count} Candidates tokens: {usage.candidates_token_count} Total tokens: {usage.total_token_count}")
+        if sources_used:
+            f.write("\n\n Sources Used: \n" + str(sources_used))
+        
+        f.write("\n\n Response: \n")
+
+        f.write(response.text)
+        f.flush()
+        print ('Flushed to file ', filename)
+
+def get_faq_questions():
+    with open("faq_questions.txt", "r") as f:
+        return f.read().splitlines()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--client_id", type=str, default="none", help="ID of the client")
     parser.add_argument("--pinecone", type=bool, default=False, help="Use pinecone")
     parser.add_argument("--force_reindex", type=bool, default=False, help="Force reindex")
+    parser.add_argument("--use_faq", type=bool, default=False, help="Use faq questions")
+    parser.add_argument("--save_response_file", type=str, default="faq_results.txt", help="Save response to file")
     args = parser.parse_args()
     
     client_id = args.client_id
     use_pinecone = args.pinecone
     force_reindex = args.force_reindex
+    use_faq = args.use_faq
+    save_response_file = args.save_response_file
     print("use_pinecone", use_pinecone)
     
     files_list = get_all_files(INPUT_DIR_CHUNK) if use_pinecone else get_all_files(INPUT_DIR)
@@ -56,16 +79,27 @@ if __name__ == "__main__":
     else:
         user_data_str = user_data.get_user_data(client_id)
 
-    response = searcher.search_files(EXPLAIN_QUERY, user_data_str)
+    response, sources_used = searcher.search_files(EXPLAIN_QUERY, user_data_str)
     show_response(response)
     
-    print("\nAsk questions about your files (type 'exit' or 'quit' to stop):")
-    while True:
-        query = input("\nEnter  your Query: ")
-        if query.lower() in ["exit", "quit", ""] or query == "":
-            break
+
+    if use_faq:
+        faq_questions = get_faq_questions()
+        for faq_question in faq_questions:
+            print("\n\nQuerying from FAQ: ", faq_question)
+            response, sources_used = searcher.search_files(faq_question, user_data.get_user_data(client_id))
+            show_response(response)
+            save_response(response, save_response_file, faq_question, sources_used)
+            time.sleep(15)
+
+    else:
+        print("\nAsk questions about your files (type 'exit' or 'quit' to stop):")
+        while True:
+            query = input("\nEnter  your Query: ")
+            if query.lower() in ["exit", "quit", ""] or query == "":
+                break
         
-        response = searcher.search_files(query, user_data.get_user_data(client_id))
+        response, sources_used = searcher.search_files(query, user_data.get_user_data(client_id))
         show_response(response)
 
 
