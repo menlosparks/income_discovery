@@ -39,9 +39,9 @@ user_data = """
 # MODEL_NAME = 'gemma-3-4b-it'
 MODEL_NAME = 'gemini-2.5-flash'
 # MODEL_NAME = 'gemini-3.1-pro-preview'
-CHUNK_SIZE_KB=40
-CHUNK_OVERLAP_KB = 6
-MAX_TOTAL_SIZE_KB = 50
+CHUNK_SIZE_KB=30
+CHUNK_OVERLAP_KB = 5
+MAX_TOTAL_SIZE_KB = 35
 
 
 class Chunker:
