@@ -36,17 +36,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--client_id", type=str, default="none", help="ID of the client")
     parser.add_argument("--pinecone", type=bool, default=False, help="Use pinecone")
+    parser.add_argument("--force_reindex", type=bool, default=False, help="Force reindex")
     args = parser.parse_args()
     
     client_id = args.client_id
     use_pinecone = args.pinecone
+    force_reindex = args.force_reindex
     print("use_pinecone", use_pinecone)
     
     files_list = get_all_files(INPUT_DIR_CHUNK) if use_pinecone else get_all_files(INPUT_DIR)
     searcher = PconSearch() if use_pinecone else FileSearcher()
     user_data = UserData()
 
-    file_search_store = searcher.upload_files(files_list)
+    file_search_store = searcher.upload_files(files_list, force_reindex)
 
     if client_id == "none":
         print("No client ID provided. Skipping search.")

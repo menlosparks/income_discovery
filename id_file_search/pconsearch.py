@@ -132,14 +132,14 @@ class PconSearch:
             documents.append(file_text)
         return documents
 
-    def upload_files(self, files_list: list[str]):
+    def upload_files(self, files_list: list[str], force_reindex=False):
         """ Read the contents of each file in files_list and upload to pinecone"""
         print(f"Uploading {len(files_list)} files to pinecone...")
         documents = self.get_documents(files_list)
         print(f"Read {len(documents)} documents from {len(files_list)} files.")
         # embeddings = self.get_embeddings(documents)
         # print(f"Read {len(embeddings)} embeddings from {len(documents)} documents.")
-        index, vector_count, embeddings = self.get_or_create_pinecone_index(documents)
+        index, vector_count, embeddings = self.get_or_create_pinecone_index(documents, force_reindex)
         self.index = index
         # if int(vector_count) == int(len(embeddings)):
         #     print(f'Index already has {vector_count} vectors. Skipping upsert.')

@@ -86,7 +86,7 @@ class FileSearcher:
 
 
 
-    def upload_files(self, files_list: list[str]):
+    def upload_files(self, files_list: list[str], force_reindex=False):
         """Upload files to the server."""
         self.file_search_store = self.get_or_create_file_search_store()
         if not self.file_search_store:
