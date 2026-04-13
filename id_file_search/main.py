@@ -7,6 +7,7 @@ from filesearcher import FileSearcher
 from claude_filesearcher import ClaudeFileSearcher
 from user_data import UserData
 from pconsearch import PconSearch
+from pageindexsearch import PageIndexSearch
 
 # Load environment variables
 load_dotenv()
@@ -14,11 +15,13 @@ load_dotenv()
 ## updated for git
 INPUT_DIR = r"../storage/irs-files"
 INPUT_DIR_CHUNK = r"../storage/irs-files-chunk"
+INPUT_DIR_PDF = r"../storage/irs-pdfs"
 EXPLAIN_QUERY='Explain how RMD value is calculated for the user'
 
 def get_all_files(input_dir):
     """Returns a list of all files in the given directory."""
     if not os.path.exists(input_dir):
+        print("Directory does not exist: ", input_dir)
         return []
     
     file_list = []
@@ -51,10 +54,13 @@ def get_faq_questions():
     with open("faq_questions.txt", "r") as f:
         return f.read().splitlines()
 
+# Use with  python main.py --pinecone=False  --client_id=client_2
+# Use with pinecone  python main.py --pinecone=True  --client_id=client_2
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--client_id", type=str, default="none", help="ID of the client")
     parser.add_argument("--pinecone", type=bool, default=False, help="Use pinecone")
+    parser.add_argument("--pageindex", type=bool, default=False, help="Use pageindex")
     parser.add_argument("--force_reindex", type=bool, default=False, help="Force reindex")
     parser.add_argument("--use_faq", type=bool, default=False, help="Use faq questions")
     parser.add_argument("--save_response_file", type=str, default="faq_results.txt", help="Save response to file")
@@ -62,13 +68,33 @@ if __name__ == "__main__":
     
     client_id = args.client_id
     use_pinecone = args.pinecone
+    use_pageindex = args.pageindex
     force_reindex = args.force_reindex
     use_faq = args.use_faq
     save_response_file = args.save_response_file
     print("use_pinecone", use_pinecone)
+    print("use_pageindex", use_pageindex)
+
+
+    searcher = None
+    if use_pinecone and use_pageindex:
+        print("Both pinecone and pageindex are enabled. Please enable only one.")
+        sys.exit(0)
+    elif use_pinecone:
+        searcher = PconSearch()
+    elif use_pageindex:
+        searcher = PageIndexSearch()
+    else:
+        searcher = FileSearcher()
     
-    files_list = get_all_files(INPUT_DIR_CHUNK) if use_pinecone else get_all_files(INPUT_DIR)
-    searcher = PconSearch() if use_pinecone else FileSearcher()
+    files_list = []
+    if use_pinecone:
+        files_list = get_all_files(INPUT_DIR_CHUNK)
+    elif use_pageindex:
+        print("Using pageindex to read from directory: ", INPUT_DIR_PDF, " for pdf files")
+        files_list = get_all_files(INPUT_DIR_PDF)
+    else:
+        files_list = get_all_files(INPUT_DIR)
     user_data = UserData()
 
     file_search_store = searcher.upload_files(files_list, force_reindex)

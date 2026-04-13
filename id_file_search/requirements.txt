@@ -6,3 +6,6 @@ python-dotenv
 anthropic
 pinecone
 pinecone-client
+openai
+pageindex
+weasyprint
