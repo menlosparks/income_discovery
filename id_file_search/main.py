@@ -72,29 +72,49 @@ if __name__ == "__main__":
     force_reindex = args.force_reindex
     use_faq = args.use_faq
     save_response_file = args.save_response_file
-    print("use_pinecone", use_pinecone)
-    print("use_pageindex", use_pageindex)
+    print("use_pinecone:", use_pinecone)
+    print("use_pageindex:", use_pageindex)
+    print("force_reindex:", force_reindex)
+    print("use_faq:", use_faq)
+    print("save_response_file:", save_response_file)
+    print("client_id:", client_id)
+
+    match (use_pinecone, use_pageindex):
+        case (True, True):
+            print("Both pinecone and pageindex are enabled. Please enable only one.")
+            sys.exit(0)
+        case (True, False):
+            searcher = PconSearch()
+            files_list = get_all_files(INPUT_DIR_CHUNK)
+        case (False, True):
+            searcher = PageIndexSearch()
+            print("Using pageindex to read from directory: ", INPUT_DIR_PDF, " for pdf files")
+            files_list = get_all_files(INPUT_DIR_PDF)
+        case (False, False):
+            searcher = FileSearcher()
+            files_list = get_all_files(INPUT_DIR)
 
 
-    searcher = None
-    if use_pinecone and use_pageindex:
-        print("Both pinecone and pageindex are enabled. Please enable only one.")
-        sys.exit(0)
-    elif use_pinecone:
-        searcher = PconSearch()
-    elif use_pageindex:
-        searcher = PageIndexSearch()
-    else:
-        searcher = FileSearcher()
+
+    # if use_pinecone and use_pageindex:
+    #     print("Both pinecone and pageindex are enabled. Please enable only one.")
+    #     sys.exit(0)
+    # elif use_pinecone:
+    #     searcher = PconSearch()
+    # elif use_pageindex:
+    #     searcher = PageIndexSearch()
+    # else:
+    #     searcher = FileSearcher()
     
-    files_list = []
-    if use_pinecone:
-        files_list = get_all_files(INPUT_DIR_CHUNK)
-    elif use_pageindex:
-        print("Using pageindex to read from directory: ", INPUT_DIR_PDF, " for pdf files")
-        files_list = get_all_files(INPUT_DIR_PDF)
-    else:
-        files_list = get_all_files(INPUT_DIR)
+    # files_list = []
+
+    # if use_pinecone:
+    #     files_list = get_all_files(INPUT_DIR_CHUNK)
+    # elif use_pageindex:
+    #     print("Using pageindex to read from directory: ", INPUT_DIR_PDF, " for pdf files")
+    #     files_list = get_all_files(INPUT_DIR_PDF)
+    # else:
+    #     files_list = get_all_files(INPUT_DIR)
     user_data = UserData()
 
     file_search_store = searcher.upload_files(files_list, force_reindex)

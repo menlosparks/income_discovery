@@ -24,6 +24,8 @@ class PageIndexSearch:
     Do not exceed 100 words in your response. 
     """
 
+    doc_id_to_file_name = {}
+
 
     def __init__(self):
         """
@@ -86,16 +88,48 @@ class PageIndexSearch:
         print("Uploading to Pageindex for url: ", file_name)
         print('Page index api   key: ', self.pi_client.api_key)
         try:
-            # pdf_file_name = self.convert_html_to_pdf(file_name)
-            # print(f"Saved HTML to PDF successfully as pdf file name ${pdf_file_name}")
-            self.pi_client.submit_document(file_name)
-            print("Uploaded to Pageindex successfully")
+            result = self.pi_client.submit_document(file_name)
+            doc_id = result["doc_id"]   
+            print(f"Uploaded {file_name} to Pageindex successfully with doc_id: {doc_id}")
+            return doc_id
         except Exception as e:
             print("Error uploading to Pageindex: ", e)
-        
+            return None
+
+
+    def verify_upload_to_page_index(self, doc_id: str):
+        """ Verify the upload to Pageindex."""
+        try:
+            ## Loop thru the keys of the tree_result and print the keys
+            for doc_id in self.doc_id_to_file_name.keys()[:1]:
+                tree_result = self.pi_client.get_tree(doc_id)["result"]
+                print(f"Verified {doc_id} uploaded to Pageindex successfully")
+        except Exception as e:
+            print("Error verifying upload to Pageindex: ", e)
+            return None
+
+    def list_documents(self):
+        """ List all documents in the store."""
+        api_key=os.environ.get("PAGEINDEX_API_KEY")
+        response = requests.get(
+            "https://api.pageindex.ai/docs",
+            headers={"api_key": api_key},
+            params={"limit": 10, "offset": 0}
+        )
+        return response.json()
 
     def upload_files(self, files_list: list[str], force_reindex=False):
         """ Read the contents of each file in files_list and upload to pinecone"""
         print(f"Uploading {len(files_list)} files to Pageindex...")
         for file in files_list:
-            self.upload_to_page_index(file)
+            doc_id = self.upload_to_page_index(file)
+            self.doc_id_to_file_name[doc_id] = file
+        print("doc_id_to_file_name uploaded to Pageindex: ", self.doc_id_to_file_name)
+        return self.doc_id_to_file_name
+
+    def search_files(self, query: str, user_data: str):
+        """Search files in the store."""
+        print("Search not implemented yet")
+        return None, None
+        
+        
