@@ -140,39 +140,37 @@ class FileSearcher:
 
         # user_data=self.get_dummy_user_data(client_id)
         query=query+"\n Answer using the following user data: \n"+user_data
-        response = self.client.models.generate_content(
-            model=self.MODEL_NAME,
-            contents=query,
-            config=types.GenerateContentConfig(
-                system_instruction=self.SYSTEM_INSTRUCTION,
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
-                tools=[
-                    types.Tool(
-                        file_search=types.FileSearch(
-                            file_search_store_names=[self.file_search_store.name]
-                        )
-                    ),
-                    # types.Tool(
-                    #     function_declarations=[
-                    #         types.FunctionDeclaration(
-                    #             name='get_dummy_user_data',
-                    #             description='Returns a dummy JSON string with user financial information.',
-                    #             parameters=types.Schema(
-                    #                 type='OBJECT',
-                    #                 properties={}
-                    #             )
-                    #         )
-                    #     ]
-                    # )
-                ]
-            )
-        )
-        # Accessing the tokens
-        usage = response.usage_metadata
-        print(f"Prompt tokens: {usage.prompt_token_count}")
-        print(f"Candidates tokens: {usage.candidates_token_count}")
-        print(f"Total tokens: {usage.total_token_count}")
-        return response, None
+        while True:
+            try:
+                response = self.client.models.generate_content(
+                    model=self.MODEL_NAME,
+                    contents=query,
+                    config=types.GenerateContentConfig(
+                        system_instruction=self.SYSTEM_INSTRUCTION,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
+                    tools=[
+                        types.Tool(
+                            file_search=types.FileSearch(
+                                file_search_store_names=[self.file_search_store.name]
+                            )
+                        ),
+                        ]
+                    )
+                )
+                # Accessing the tokens
+                usage = response.usage_metadata
+                print(f"Prompt tokens: {usage.prompt_token_count}")
+                print(f"Candidates tokens: {usage.candidates_token_count}")
+                print(f"Total tokens: {usage.total_token_count}")
+                return response, None
+            except genai.errors.ServerError as e:
+                print(f"Server busy error: {e}")
+                print("Retrying in 10 seconds... Hit Ctrl-C to exit")
+                time.sleep(10)
+                continue
+            except Exception as e:
+                print(f"Error: {e}")
+                raise e
 
     def get_dummy_user_data(self, client_id: str) -> str:
         """Returns a dummy JSON string with user financial information."""

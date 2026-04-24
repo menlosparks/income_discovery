@@ -144,11 +144,6 @@ class PconSearch:
         # print(f"Read {len(embeddings)} embeddings from {len(documents)} documents.")
         index, vector_count, embeddings = self.get_or_create_pinecone_index(documents, force_reindex)
         self.index = index
-        # if int(vector_count) == int(len(embeddings)):
-        #     print(f'Index already has {vector_count} vectors. Skipping upsert.')
-        #     return index
-        # else :
-        #     print(f'Vectors {vector_count} are not equal to embeddings {len(embeddings)}: {(vector_count == len(embeddings))}')
         if ( embeddings is not None):
             print(f"Index has {vector_count} vectors and we have {len(embeddings)} embeddings to upsert.")
             self.upsert_embeddings(embeddings, index, documents, files_list)
@@ -220,12 +215,23 @@ class PconSearch:
                                     Perform needed calculations using the provided user data"
 
         print('Querying LLM with prompt: ' + prompt[:100])
-        response = self.client.models.generate_content(
-            model=self.MODEL_NAME,
-            contents=prompt);
-        usage = response.usage_metadata
-        print(f"Prompt tokens: {usage.prompt_token_count} \
-            Candidates tokens: {usage.candidates_token_count} \
-            Total tokens: {usage.total_token_count}")
+
+        while True:
+            try:
+                response = self.client.models.generate_content(
+                    model=self.MODEL_NAME,
+                    contents=prompt);
+                usage = response.usage_metadata
+                print(f"Prompt tokens: {usage.prompt_token_count} \
+                    Candidates tokens: {usage.candidates_token_count} \
+                Total tokens: {usage.total_token_count}")
+            except genai.errors.ServerError as e:
+                print(f"Server busy error: {e}")
+                print("Retrying in 10 seconds... Hit Ctrl-C to exit")
+                time.sleep(10)
+                continue
+            except Exception as e:
+                print(f"Exception type: {type(e).__name__}, message: {e}")
+                raise e
 
         return response, sources_used

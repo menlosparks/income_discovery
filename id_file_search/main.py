@@ -15,8 +15,15 @@ load_dotenv()
 ## updated for git
 INPUT_DIR = r"../storage/irs-files"
 INPUT_DIR_CHUNK = r"../storage/irs-files-chunk"
-INPUT_DIR_PDF = r"../storage/irs-pdfs"
-EXPLAIN_QUERY='Explain how RMD value is calculated for the user'
+INPUT_DIR_PDF = r"../storage/irs-pdfs/trial"
+SAMPLE_QUERY='Explain how RMD value is calculated for the user'
+
+INPUT_DIR_PDF_NO590A='../storage/irs-no-p590a/pdf'
+INPUT_DIR_HTML_CHUNKS_NO590A='../storage/irs-no-p590a/html-chunks'
+
+INPUT_DIR_FILESEARCH=INPUT_DIR_PDF_NO590A
+INPUT_DIR_PCONSEARCH=INPUT_DIR_HTML_CHUNKS_NO590A
+INPUT_DIR_PAGEINDEXSEARCH=INPUT_DIR_PDF_NO590A
 
 def get_all_files(input_dir):
     """Returns a list of all files in the given directory."""
@@ -34,19 +41,20 @@ def get_all_files(input_dir):
     return file_list
 
 def show_response(response):
-    print('\n\n***************\n\n', response.text, '\n\n***************\n\n')
+    print('\n\n***************\n\n',str(response), '\n\n***************\n\n')
 
 def save_response(response, filename, query, sources_used = None):
     with open(filename, "a") as f:
         f.write("\n\n***************\n\n Query:\n " + query + "\n\n")
-        usage = response.usage_metadata
-        f.write(f"Prompt tokens: {usage.prompt_token_count} Candidates tokens: {usage.candidates_token_count} Total tokens: {usage.total_token_count}")
+        if response:
+            usage = response.usage_metadata
+            f.write(f"Prompt tokens: {usage.prompt_token_count} Candidates tokens: {usage.candidates_token_count} Total tokens: {usage.total_token_count}")
         if sources_used:
             f.write("\n\n Sources Used: \n" + str(sources_used))
         
         f.write("\n\n Response: \n")
-
-        f.write(response.text)
+        if response:
+            f.write(response.text)
         f.flush()
         print ('Flushed to file ', filename)
 
@@ -64,6 +72,7 @@ if __name__ == "__main__":
     parser.add_argument("--force_reindex", type=bool, default=False, help="Force reindex")
     parser.add_argument("--use_faq", type=bool, default=False, help="Use faq questions")
     parser.add_argument("--save_response_file", type=str, default="faq_results.txt", help="Save response to file")
+    parser.add_argument("--search_only", type=bool, default=False, help="Search only")
     args = parser.parse_args()
     
     client_id = args.client_id
@@ -72,9 +81,11 @@ if __name__ == "__main__":
     force_reindex = args.force_reindex
     use_faq = args.use_faq
     save_response_file = args.save_response_file
+    search_only = args.search_only
     print("use_pinecone:", use_pinecone)
     print("use_pageindex:", use_pageindex)
     print("force_reindex:", force_reindex)
+    print("search_only:", search_only)
     print("use_faq:", use_faq)
     print("save_response_file:", save_response_file)
     print("client_id:", client_id)
@@ -85,39 +96,19 @@ if __name__ == "__main__":
             sys.exit(0)
         case (True, False):
             searcher = PconSearch()
-            files_list = get_all_files(INPUT_DIR_CHUNK)
+            files_list = get_all_files(INPUT_DIR_PCONSEARCH)
         case (False, True):
             searcher = PageIndexSearch()
             print("Using pageindex to read from directory: ", INPUT_DIR_PDF, " for pdf files")
-            files_list = get_all_files(INPUT_DIR_PDF)
+            files_list = get_all_files(INPUT_DIR_PAGEINDEXSEARCH)
         case (False, False):
             searcher = FileSearcher()
-            files_list = get_all_files(INPUT_DIR)
+            files_list = get_all_files(INPUT_DIR_FILESEARCH)
 
-
-
-    # if use_pinecone and use_pageindex:
-    #     print("Both pinecone and pageindex are enabled. Please enable only one.")
-    #     sys.exit(0)
-    # elif use_pinecone:
-    #     searcher = PconSearch()
-    # elif use_pageindex:
-    #     searcher = PageIndexSearch()
-    # else:
-    #     searcher = FileSearcher()
-    
-    # files_list = []
-
-    # if use_pinecone:
-    #     files_list = get_all_files(INPUT_DIR_CHUNK)
-    # elif use_pageindex:
-    #     print("Using pageindex to read from directory: ", INPUT_DIR_PDF, " for pdf files")
-    #     files_list = get_all_files(INPUT_DIR_PDF)
-    # else:
-    #     files_list = get_all_files(INPUT_DIR)
     user_data = UserData()
 
-    file_search_store = searcher.upload_files(files_list, force_reindex)
+    if not search_only:
+        file_search_store = searcher.upload_files(files_list, force_reindex)
 
     if client_id == "none":
         print("No client ID provided. Skipping search.")
@@ -125,8 +116,8 @@ if __name__ == "__main__":
     else:
         user_data_str = user_data.get_user_data(client_id)
 
-    response, sources_used = searcher.search_files(EXPLAIN_QUERY, user_data_str)
-    show_response(response)
+    response, sources_used = searcher.search_files(SAMPLE_QUERY, user_data_str)
+    show_response(response if response else "No response from searcher")
     
 
     if use_faq:
