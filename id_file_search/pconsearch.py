@@ -8,10 +8,13 @@ from pydantic import BaseModel
 from pinecone import Pinecone, ServerlessSpec
 
 
-MODEL_ID = "google/gemma-3-4b-it"
+# MODEL_ID = "google/gemma-3-4b-it"
+MODEL_ID = 'gemini-2.5-flash'
+
 EMBEDDING_MODEL_ID="gemini-embedding-2-preview"
+# EMBEDDING_MODEL_ID="models/text-embedding-004"
 INDEX_NAME = "gemini-embedding-2-preview-income-discovery"
-NUMBER_OF_DOCUMENTS_FOR_QUERY_MATCH = 4
+NUMBER_OF_DOCUMENTS_FOR_QUERY_MATCH = 2
 
 class PconSearch:
     """
@@ -42,27 +45,58 @@ class PconSearch:
         self.file_search_store = None
         self.pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
         self.index = None
-        self.client = genai.Client()
+        self.client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
 
 
     def get_embeddings(self, documents: list[str]):
         """ Get the embedding for a given text."""
-        result = self.client.models.embed_content(
-            model=EMBEDDING_MODEL_ID,
-            contents=documents
-        )
+        print(f"Creating embedding with model {EMBEDDING_MODEL_ID}")
+        embeddings =[]
+        for document in documents: 
+            print(f"Creating embedding for doc of size {len(document)}")
+            while True:
+                try:
+                    result = self.client.models.embed_content(
+                        model=EMBEDDING_MODEL_ID,
+                        contents=document
+                    )
+                    embeddings.extend(result.embeddings)
+                    print(f"Created embeddings so far :{len(embeddings)}")
+                    break; ## break while loop and go to next document in for loop
+                except genai.errors.ServerError as e:
+                    print(f"Server busy error: {e}")
+                    print("Retrying in 10 seconds... Hit Ctrl-C to exit")
+                    time.sleep(10)
+                    continue
+                except genai.errors.ClientError as e:
+                    print(f"Client error: {e}")
+                    if (e.code == 429):
+                        print("Retrying in 20 seconds... Hit Ctrl-C to exit")
+                        time.sleep(20)
+                        continue
+                    else:
+                        print("Severe error exiting")
+                        raise e
+                except Exception as e:
+                    print(f"Error: {e}")
+                    raise e
+
+
+
+
+
         # for embedding in result.embeddings:
         #     # Print just a part of the embedding to keep the output manageable
         #     print(str(embedding)[:50], '... TRIMMED]')
 
-        dimension = len(result.embeddings[0].values)  # Gemma-3-27b hidden size
+        dimension = len(embeddings[0].values)  # Gemma-3-27b hidden size
 
         # print('embeddings ' + str(result.embeddings))
         # print('embeddings[0] ' + str(result.embeddings[0]))
-        print('embeddings result.size ' + str(len(result.embeddings)))
-        print('embeddings[0].size ' + str(len(result.embeddings[0].values)))
-        print('embeddings[1].size ' + str(len(result.embeddings[1].values)))
-        return result.embeddings
+        print('embeddings result.size ' + str(len(embeddings)))
+        print('embeddings[0].size ' + str(len(embeddings[0].values)))
+        print('embeddings[1].size ' + str(len(embeddings[1].values)))
+        return embeddings
 
     def get_or_create_pinecone_index(self, documents, force_recreate=False):
         """ Create a pinecone index."""
@@ -200,7 +234,6 @@ class PconSearch:
     def search_files(self, query: str, user_data: str):
         """Search files in the store."""
         matching_docs, matching_file_names = self.retrieve_matching_documents(query)
-        print('matching_docs ' + str(matching_docs)[:400])
         print('matching_file_names ' + str(matching_file_names)[:400])
         sources_used = matching_file_names
 
@@ -225,6 +258,7 @@ class PconSearch:
                 print(f"Prompt tokens: {usage.prompt_token_count} \
                     Candidates tokens: {usage.candidates_token_count} \
                 Total tokens: {usage.total_token_count}")
+                return response, sources_used
             except genai.errors.ServerError as e:
                 print(f"Server busy error: {e}")
                 print("Retrying in 10 seconds... Hit Ctrl-C to exit")
@@ -234,4 +268,3 @@ class PconSearch:
                 print(f"Exception type: {type(e).__name__}, message: {e}")
                 raise e
 
-        return response, sources_used
