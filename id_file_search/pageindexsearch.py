@@ -2,27 +2,48 @@ import os
 import time
 import json
 import asyncio
+from google import genai
+
 import requests
 from pageindex import PageIndexClient
 import pageindex.utils as utils
 import openai
 # from weasyprint import HTML
+from common import SYSTEM_INSTRUCTION, MODEL_NAME, call_shared_llm
 
 PAGEINDEX_API_KEY = os.environ.get("PAGEINDEX_API_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+NUMBER_OF_NODES_FOR_QUERY_MATCH = 2
 
 class PageIndexSearch:
     """
     """
-    SYSTEM_INSTRUCTION = """
-    You are a helpful financial advisor. Give concise answers to the user's questions. Limit
-    the answers to 3 or 4 sentences. If the answer is not in the documents, say so. 
-    You have access to the user_data in JSON format to retrieve information about the user's 
-    spouse, income, and account balances. In every response include a reference to the relevant
-    field in the  user data which is provided in the JSON object.
-    Always make calculations based on the user data, be sure of the calculations and provide the answer in a clear and concise manner. 
-    Do not exceed 100 words in your response. 
-    """
+    # SYSTEM_INSTRUCTION = """
+    # You are a helpful financial advisor. Give concise answers to the user's questions. Limit
+    # the answers to 3 or 4 sentences. If the answer is not in the documents, say so. 
+    # You have access to the user_data in JSON format to retrieve information about the user's 
+    # spouse, income, and account balances. In every response include a reference to the relevant
+    # field in the  user data which is provided in the JSON object.
+    # Always make calculations based on the user data, be sure of the calculations and provide the answer in a clear and concise manner. 
+    # Do not exceed 100 words in your response. 
+    # """
+    original_initial_search_prompt = """
+        You are given a question and a tree structure of a document.
+        Each node contains a node id, node title, and a corresponding summary.
+        Your task is to find all nodes that are likely to contain the answer to the question.
+        Question: {{query}}
+        Document tree structure:
+        {{json.dumps(tree_without_text, indent=2)}}
+        Please reply in the following JSON format:
+        {{
+            "thinking": "<Your thinking process on which nodes are relevant to the question>",
+            "node_list": ["node_id_1", "node_id_2"]
+        }}
+        Directly return the final JSON structure. Do not output anything else.
+        Do not include any backticks or code formatting in the response.
+        Your response should be only the JSON object.
+        """
+
     pageindex_initial_prompt = """
     You are given a question and a tree structure of a document.
     Each node contains a node id, node title, and a corresponding summary.
@@ -37,6 +58,7 @@ class PageIndexSearch:
     }}
     Directly return the final JSON structure. Do not output anything else.
     """
+    # MODEL_NAME = 'gemini-2.5-flash'
 
     doc_id_to_file_name = {}
 
@@ -48,19 +70,29 @@ class PageIndexSearch:
         """
         self.pi_client = PageIndexClient(api_key=os.environ.get("PAGEINDEX_API_KEY"))
         self.file_search_store = None
+        self.client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
 
-    async def call_llm(prompt: str, model: str = "gpt-4.1", temperature: float = 0.0) -> str:
-        """
-        Uses OpenAI's async client to create a chat completion.
-        Adjust to your installed OpenAI SDK version if necessary.
-        """
-        client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
-        response = await client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=temperature
-        )
-        return response.choices[0].message.content.strip()
+    def call_llm(self, prompt: str) -> str:
+        response, usage = call_shared_llm(prompt, self.client)
+        return response.text, usage
+        # """
+        # Uses OpenAI's async client to create a chat completion.
+        # Adjust to your installed OpenAI SDK version if necessary.
+        # """
+        # response = self.client.models.generate_content(
+        #     model=MODEL_NAME,
+        #     contents=prompt);
+        # usage = response.usage_metadata
+        # print(f"Prompt tokens: {usage.prompt_token_count} Candidates tokens: {usage.candidates_token_count} Total tokens: {usage.total_token_count}")
+
+        return response.text, usage
+        # client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+        # response = client.chat.completions.create(
+        #     model=model,
+        #     messages=[{"role": "user", "content": prompt}],
+        #     temperature=temperature
+        # )
+        # return response.choices[0].message.content.strip()
 
 
     # def convert_html_to_pdf(self, file_name):
@@ -111,16 +143,16 @@ class PageIndexSearch:
             return None
 
 
-    def verify_upload_to_page_index(self, doc_id: str):
-        """ Verify the upload to Pageindex."""
-        try:
-            ## Loop thru the keys of the tree_result and print the keys
-            for doc_id in self.doc_id_to_file_name.keys()[:1]:
-                tree_result = self.pi_client.get_tree(doc_id)["result"]
-                print(f"Verified {doc_id} uploaded to Pageindex successfully")
-        except Exception as e:
-            print("Error verifying upload to Pageindex: ", e)
-            return None
+    # def verify_upload_to_page_index(self, doc_id: str):
+    #     """ Verify the upload to Pageindex."""
+    #     try:
+    #         ## Loop thru the keys of the tree_result and print the keys
+    #         for doc_id in self.doc_id_to_file_name.keys()[:1]:
+    #             tree_result = self.pi_client.get_tree(doc_id)["result"]
+    #             print(f"Verified {doc_id} uploaded to Pageindex successfully")
+    #     except Exception as e:
+    #         print("Error verifying upload to Pageindex: ", e)
+    #         return None
 
     def delete_document(self, doc_id: str):
         """ Delete all documents in the store."""
@@ -211,31 +243,128 @@ class PageIndexSearch:
         """ Get the document tree."""
         try:
             tree_result = self.pi_client.get_tree(doc_id)["result"]
-            print(f"Verified {doc_id} uploaded to Pageindex successfully")
+            print (f"Tree for document {doc_id}: ")
+            utils.print_tree(tree_result)
             return tree_result
         except Exception as e:
             print("Error getting document tree from Pageindex: ", e)
             return None
 
+    def get_doc_context(self, tree_search_result, matching_nodes, node_map) -> str:
+        """ Get node text for a document."""
+        try:
+            retrieved_texts = []
+            for nid in matching_nodes:
+                node = node_map.get(nid)
+                print(f"Retrieving context for matching node {nid} title: {node['title'][:100]}")
+                if not node:
+                    continue
+                # node['text'] might be a list of page-level strings or a string
+                node_text = node.get("text") or ""
+                if isinstance(node_text, list):
+                    node_text = "\n\n".join(node_text)
+                retrieved_texts.append(f"--- Node {nid}: {node.get('title')} ---\n{node_text}")
+            combined_context = "\n\n".join(retrieved_texts) or "No context retrieved."
+            return combined_context
+        except Exception as e:
+            print("Error getting node text from Pageindex: ", e)
+            raise e
+
+    def get_matching_context_for_doc(self, doc_id: str, query: str):
+        """ Get matching context for a document."""
+        try:
+            tree_result = self.get_document_tree(doc_id)
+            # Build a node map for easy lookup
+            node_map = utils.create_node_mapping(tree_result)
+            tree_without_text = utils.remove_fields(tree_result.copy(), fields=["text"])
+            search_prompt = f"""
+        You are given a question and a tree structure of a document.
+        Each node contains a node id, node title, and a corresponding summary.
+        Your task is to find all nodes that are likely to contain the answer to the question.
+        Question: {query}
+        Document tree structure:
+        {json.dumps(tree_without_text, indent=2)}
+        Rank the nodes in order of relevance 
+        Match the question to the most relevant {NUMBER_OF_NODES_FOR_QUERY_MATCH} nodes.
+        Discard less relevant nodes and return only the node ids of the {NUMBER_OF_NODES_FOR_QUERY_MATCH} most relevant nodes.
+        Please reply in the following JSON format:
+        {{
+            "node_list": ["node_id_1", "node_id_2"]
+        }}
+        Directly return the final JSON structure. Do not output anything else.
+        Do not include any backticks or code formatting in the response.
+        Your response should be only the JSON object. No backticks and no other text.
+        """
+            print("Asking LLM to search the tree for relevant nodes. Search Prompt ===: ", search_prompt)
+            tree_search_result_text, usage = self.call_llm(search_prompt)
+            print(f"\n=== LLM response ===\n{tree_search_result_text}\n=== LLM usage ===\n{usage}")
+            tree_search_result = json.loads(tree_search_result_text)
+            matching_nodes=tree_search_result.get("node_list")
+            print("Node IDs returned:", matching_nodes)
+            # Get actual node texts and combine
+            combined_context_for_doc = self.get_doc_context(tree_search_result, matching_nodes, node_map)
+            return combined_context_for_doc, usage
+
+        except Exception as e:
+            print("Error getting matching context for document from Pageindex: ", e)
+            raise e
+
+    def print_debug_doc(self, doc_id: str):
+        tree_result = self.get_document_tree(doc_id)
+        node_map = utils.create_node_mapping(tree_result)
+        # utils.print_tree(node_map)
+        print("Node Map: ", json.dumps(node_map))
+
+    def get_answer_from_combined_contexts(self, combined_contexts: str, query: str, user_data: str):
+        """Get answer from combined contexts."""
+        try:
+            prompt= SYSTEM_INSTRUCTION + "\n\
+                Use this context to answer the query: \n\
+                    " + "\n".join(combined_contexts) + "\n\
+                        And use the following user data in JSON format to answer the query: \n\
+                            " + user_data + "\n\
+                                Answer the following query: \n\
+                                    " + query + "\n\
+                                        Perform needed calculations using the provided user data"
+
+            print('Querying shared LLM with prompt: ' + prompt[:100])
+            response, usage = call_shared_llm(prompt, self.client)
+            return response, usage
+        except Exception as e:
+            print("Error getting answer from combined contexts from Pageindex: ", e)
+            raise e 
+        
+    def calculate_usage(self, usage_list):
+        tot_prompt_tokens = 0
+        tot_candidate_tokens = 0
+        tot_total_tokens = 0
+        for usage in usage_list:
+            tot_prompt_tokens += usage.prompt_token_count
+            tot_candidate_tokens += usage.candidates_token_count
+            tot_total_tokens += usage.total_token_count
+        return tot_prompt_tokens, tot_candidate_tokens, tot_total_tokens
+
+        
     def search_files(self, query: str, user_data: str):
         """Search files in the store."""
-        print("Search not implemented yet")
         documents = self.list_documents()
         document_names = [doc['name'] for doc in documents]
         document_ids = [doc['id'] for doc in documents]
-        print(f"Document names: {document_names}")
-        print(f"Document IDs: {document_ids}")
-        for doc_id in document_ids[:1]:
-            tree_result = self.get_document_tree(doc_id)
-            tree_without_text = utils.remove_fields(tree_result.copy(), fields=["text"])
-            print(f"Verified {doc_id} uploaded to Pageindex successfully has tree: {tree_result}")
+        print(f"Document names: {document_names} ,\n Document IDs: {document_ids}")
+        contexts_for_docs = []
+        usage_list = []
+        for doc_id in document_ids:
+            # self.print_debug_doc(doc_id)
             
-        
-        
-        # pageindex_initial_prompt
-        
-        
-        
-        return None, None
-        
-        
+            retrieved_texts, usage = self.get_matching_context_for_doc(doc_id, query)
+            contexts_for_docs.append(retrieved_texts)
+            usage_list.append(usage)
+            print("Contexts:")
+            print(retrieved_texts[:500])
+
+        combined_contexts = "\n\n".join(contexts_for_docs)
+        response, usage = self.get_answer_from_combined_contexts(combined_contexts, query, user_data)
+        usage_list.append(usage)
+        tot_prompt_tokens, tot_candidate_tokens, tot_total_tokens = self.calculate_usage(usage_list)
+        print(f"Total Prompt tokens: {tot_prompt_tokens} Total Candidates tokens: {tot_candidate_tokens} Total tokens: {tot_total_tokens}")
+        return response, None, tot_prompt_tokens, tot_candidate_tokens, tot_total_tokens, usage_list

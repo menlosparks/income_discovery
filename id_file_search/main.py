@@ -43,14 +43,24 @@ def get_all_files(input_dir):
 def show_response(response):
     print('\n\n***************\n\n',str(response), '\n\n***************\n\n')
 
-def save_response(response, filename, query, sources_used = None):
+def save_response(response, filename, query, sources_used = None, tot_prompt_tokens = None, tot_candidate_tokens = None, tot_total_tokens = None, usage_list = None):
+
+
+    prompt_tokens = tot_prompt_tokens if tot_prompt_tokens else response.usage.prompt_token_count
+    candidate_tokens = tot_candidate_tokens if tot_candidate_tokens else response.usage.candidates_token_count
+    total_tokens = tot_total_tokens if tot_total_tokens else response.usage.total_token_count
+
     with open(filename, "a") as f:
         f.write("\n\n***************\n\n Query:\n " + query + "\n\n")
+        if usage_list and len(usage_list) > 1:
+            for usage in usage_list[:-1]:
+                f.write(f"Matching pre-query Tokens: Prompt={usage.prompt_token_count}, Candidates={usage.candidates_token_count}, Thoughts={usage.thoughts_token_count},Total={usage.total_token_count}\n")
+
         if response:
-            usage = response.usage_metadata
-            f.write(f"Prompt tokens: {usage.prompt_token_count} Candidates tokens: {usage.candidates_token_count} Total tokens: {usage.total_token_count}")
+            f.write(f"Final Tokens: Prompt={prompt_tokens}, Candidates={candidate_tokens}, Total={total_tokens}\n")
         if sources_used:
             f.write("\n\n Sources Used: \n" + str(sources_used))
+        
         
         f.write("\n\n Response: \n")
         if response:
@@ -116,7 +126,12 @@ if __name__ == "__main__":
     else:
         user_data_str = user_data.get_user_data(client_id)
 
-    response, sources_used = searcher.search_files(SAMPLE_QUERY, user_data_str)
+    response, sources_used, tot_prompt_tokens, tot_candidate_tokens, tot_total_tokens, usage_list = searcher.search_files(SAMPLE_QUERY, user_data_str)
+    if usage_list and len(usage_list) > 1:
+        for usage in usage_list[:-1]:
+            print(f"Matching pre-query Tokens: Prompt={usage.prompt_token_count}, Candidates={usage.candidates_token_count}, Thoughts={usage.thoughts_token_count},Total={usage.total_token_count}\n")
+
+
     show_response(response if response else "No response from searcher")
     
 
@@ -124,9 +139,9 @@ if __name__ == "__main__":
         faq_questions = get_faq_questions()
         for faq_question in faq_questions:
             print("\n\nQuerying from FAQ: ", faq_question)
-            response, sources_used = searcher.search_files(faq_question, user_data.get_user_data(client_id))
+            response, sources_used, tot_prompt_tokens, tot_candidate_tokens, tot_total_tokens, usage_list = searcher.search_files(faq_question, user_data.get_user_data(client_id))
             show_response(response)
-            save_response(response, save_response_file, faq_question, sources_used)
+            save_response(response, save_response_file, faq_question, sources_used, tot_prompt_tokens, tot_candidate_tokens, tot_total_tokens, usage_list)
             time.sleep(15)
 
     else:
@@ -136,7 +151,7 @@ if __name__ == "__main__":
             if query.lower() in ["exit", "quit", ""] or query == "":
                 break
         
-        response, sources_used = searcher.search_files(query, user_data.get_user_data(client_id))
+        response, sources_used, tot_prompt_tokens, tot_candidate_tokens, tot_total_tokens, usage_list = searcher.search_files(query, user_data.get_user_data(client_id))
         show_response(response)
 
 

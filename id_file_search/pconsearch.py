@@ -6,10 +6,11 @@ from google.genai import types
 import time
 from pydantic import BaseModel
 from pinecone import Pinecone, ServerlessSpec
+from common import SYSTEM_INSTRUCTION, MODEL_NAME
 
 
 # MODEL_ID = "google/gemma-3-4b-it"
-MODEL_ID = 'gemini-2.5-flash'
+# MODEL_ID = 'gemini-2.5-flash'
 
 EMBEDDING_MODEL_ID="gemini-embedding-2-preview"
 # EMBEDDING_MODEL_ID="models/text-embedding-004"
@@ -19,20 +20,20 @@ NUMBER_OF_DOCUMENTS_FOR_QUERY_MATCH = 2
 class PconSearch:
     """
     """
-    SYSTEM_INSTRUCTION = """
-    You are a helpful financial advisor. Give concise answers to the user's questions. Limit
-    the answers to 3 or 4 sentences. If the answer is not in the documents, say so. 
-    You have access to the user_data in JSON format to retrieve information about the user's 
-    spouse, income, and account balances. In every response include a reference to the relevant
-    field in the  user data which is provided in the JSON object.
-    Always make calculations based on the user data, be sure of the calculations and provide the answer in a clear and concise manner. 
-    Do not exceed 100 words in your response. 
-    """
+    # SYSTEM_INSTRUCTION = """
+    # You are a helpful financial advisor. Give concise answers to the user's questions. Limit
+    # the answers to 3 or 4 sentences. If the answer is not in the documents, say so. 
+    # You have access to the user_data in JSON format to retrieve information about the user's 
+    # spouse, income, and account balances. In every response include a reference to the relevant
+    # field in the  user data which is provided in the JSON object.
+    # Always make calculations based on the user data, be sure of the calculations and provide the answer in a clear and concise manner. 
+    # Do not exceed 100 words in your response. 
+    # """
 
 
     FILE_SEARCH_STORE_NAME = 'id-irs-files-store'
     FILE_SEARCH_STORE_NAME_FILE = 'file-search-store-name.dat'
-    MODEL_NAME = 'gemini-2.5-flash'
+    # MODEL_NAME = 'gemini-2.5-flash'
     # MODEL_NAME = "gemma-3-27b-it"
 
     files_in_store = []
@@ -252,13 +253,13 @@ class PconSearch:
         while True:
             try:
                 response = self.client.models.generate_content(
-                    model=self.MODEL_NAME,
+                    model=MODEL_NAME,
                     contents=prompt);
                 usage = response.usage_metadata
                 print(f"Prompt tokens: {usage.prompt_token_count} \
                     Candidates tokens: {usage.candidates_token_count} \
                 Total tokens: {usage.total_token_count}")
-                return response, sources_used
+                return response, sources_used, None, None, None, [usage]
             except genai.errors.ServerError as e:
                 print(f"Server busy error: {e}")
                 print("Retrying in 10 seconds... Hit Ctrl-C to exit")
